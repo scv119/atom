@@ -8,9 +8,9 @@ Q = require 'q'
 {Model} = require 'theorist'
 {Subscriber} = require 'emissary'
 {Emitter} = require 'event-kit'
+DefaultDirectoryProvider = require './default-directory-provider'
 Serializable = require 'serializable'
 TextBuffer = require 'text-buffer'
-{Directory} = require 'pathwatcher'
 Grim = require 'grim'
 
 TextEditor = require './text-editor'
@@ -38,6 +38,14 @@ class Project extends Model
   constructor: ({path, paths, @buffers}={}) ->
     @emitter = new Emitter
     @buffers ?= []
+
+    @directoryProviders = [new DefaultDirectoryProvider()]
+    atom.packages.serviceHub.consume(
+      'atom.directory-provider',
+      '^0.1.0',
+      # New providers are added to the front of @directoryProviders because
+      # DefaultDirectoryProvider is a catch-all that will always provide a Directory.
+      (provider) => @directoryProviders.splice(0, 0, provider))
 
     # Mapping from the real path of a {Directory} to a {Promise} that resolves
     # to either a {Repository} or null. Ideally, the {Directory} would be used
@@ -171,7 +179,8 @@ class Project extends Model
     @destroyRepo()
     if projectPath?
       directory = if fs.isDirectorySync(projectPath) then projectPath else path.dirname(projectPath)
-      @rootDirectory = new Directory(directory)
+      for provider in @directoryProviders
+        break if @rootDirectory = provider.directoryForURISync?(directory)
 
       # For now, use only the repositoryProviders with a sync API.
       for provider in @repositoryProviders
