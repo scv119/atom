@@ -734,6 +734,7 @@ class TextEditorPresenter
     @observeDecoration(decoration)
 
     if decoration.isType('line') or decoration.isType('line-number')
+      console.log 'didAddDecoration', decoration
       @addToLineDecorationCaches(decoration, decoration.getMarker().getScreenRange())
       @updateLinesState() if decoration.isType('line')
       @updateLineNumbersState() if decoration.isType('line-number')

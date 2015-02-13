@@ -6,6 +6,18 @@ TextEditor = require '../src/text-editor'
 TextEditorPresenter = require '../src/text-editor-presenter'
 
 describe "TextEditorPresenter", ->
+  getDefaultPresenterProperties = (editor) ->
+    model: editor
+    explicitHeight: 130
+    contentFrameWidth: 500
+    lineHeight: 10
+    baseCharacterWidth: 10
+    horizontalScrollbarHeight: 10
+    verticalScrollbarWidth: 10
+    scrollTop: 0
+    scrollLeft: 0
+    lineOverdrawMargin: 0
+
   # These `describe` and `it` blocks mirror the structure of the ::state object.
   # Please maintain this structure when adding specs for new state fields.
   describe "::state", ->
@@ -18,6 +30,7 @@ describe "TextEditorPresenter", ->
 
       buffer = new TextBuffer(filePath: require.resolve('./fixtures/sample.js'))
       editor = new TextEditor({buffer})
+
       waitsForPromise -> buffer.load()
 
     afterEach ->
@@ -25,18 +38,7 @@ describe "TextEditorPresenter", ->
       buffer.destroy()
 
     buildPresenter = (params={}) ->
-      _.defaults params,
-        model: editor
-        explicitHeight: 130
-        contentFrameWidth: 500
-        lineHeight: 10
-        baseCharacterWidth: 10
-        horizontalScrollbarHeight: 10
-        verticalScrollbarWidth: 10
-        scrollTop: 0
-        scrollLeft: 0
-        lineOverdrawMargin: 0
-
+      _.defaults(params, getDefaultPresenterProperties(editor))
       new TextEditorPresenter(params)
 
     expectValues = (actual, expected) ->
@@ -2141,3 +2143,83 @@ describe "TextEditorPresenter", ->
 
     getRandomElement = (array) ->
       array[Math.floor(Math.random() * array.length)]
+
+  ffdescribe "derived state", ->
+    it "is updated correctly when the essential state changes", ->
+      essentialProperties = [
+        "scrollTop"
+        "scrollLeft"
+        "measuredHorizontalScrollbarHeight"
+        "measuredVerticalScrollbarWidth"
+        "autoHeight"
+        "explicitHeight"
+        "contentFrameWidth"
+        "backgroundColor"
+        "gutterBackgroundColor"
+        "lineHeight"
+        "mouseWheelScreenRow"
+        "baseCharacterWidth"
+        "scopedCharacterWidth"
+
+        # Add setter
+        # "scrollPastEnd"
+      ]
+
+      derivedProperties = [
+        "clientHeight"
+        "clientWidth"
+        "contentHeight"
+        "contentWidth"
+        "scrollLeft"
+        "scrollTop"
+        "endRow"
+        "height"
+        "horizontalScrollbarHeight"
+        "scrollHeight"
+        "scrollWidth"
+        "startRow"
+        "verticalScrollbarWidth"
+      ]
+
+      allProperties = _.uniq(essentialProperties.concat(derivedProperties))
+
+      presenter = Object.create(TextEditorPresenter.prototype)
+      readersByProperty = {}
+      writersByProperty = {}
+
+      for property in allProperties
+        do (property) ->
+          Object.defineProperty presenter, property,
+            get: ->
+              readersByProperty[property] ?= []
+              readersByProperty[property].push(arguments.callee.caller)
+              this["_" + property]
+
+            set: (value) ->
+              writersByProperty[property] ?= []
+              writersByProperty[property].push(arguments.callee.caller)
+              this["_" + property] = value
+
+      editor = new TextEditor({})
+      TextEditorPresenter.call(presenter, getDefaultPresenterProperties(editor))
+
+      for key, vale of presenter
+        spyOn(presenter, key).andCallOriginal()
+
+      pushPropertyReaders = (property, readers) ->
+        for reader in readersByProperty[property] ? []
+          unless reader in readers
+            readers.push(reader)
+            for writtenProperty, writers of writersByProperty
+              if reader in writers
+                pushPropertyReaders(writtenProperty, readers)
+
+      for essentialProperty in essentialProperties when essentialProperty is 'baseCharacterWidth'
+        dependentFunctions = []
+        pushPropertyReaders(essentialProperty, dependentFunctions)
+
+      for essentialProperty in essentialProperties
+        presenter["set" + _.capitalize(essentialProperty)](presenter[essentialProperty] + 1)
+
+        console.log "prop", essentialProperty
+        console.log "deps", dependentFunctions
