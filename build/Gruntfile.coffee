@@ -37,6 +37,7 @@ module.exports = (grunt) ->
   buildDir = grunt.option('build-dir') ? path.join(tmpDir, 'atom-build')
   buildDir = path.resolve(buildDir)
   installDir = grunt.option('install-dir')
+  disableAutoUpdate = grunt.option('no-auto-update') ? false
 
   home = if process.platform is 'win32' then process.env.USERPROFILE else process.env.HOME
   electronDownloadDir = path.join(home, '.atom', 'electron')
@@ -153,7 +154,7 @@ module.exports = (grunt) ->
   grunt.initConfig
     pkg: grunt.file.readJSON('package.json')
 
-    atom: {appDir, appName, symbolsDir, buildDir, contentsDir, installDir, shellAppDir}
+    atom: {appDir, appName, symbolsDir, buildDir, contentsDir, installDir, shellAppDir, disableAutoUpdate}
 
     docsOutputDir: 'docs/output'
 
