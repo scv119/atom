@@ -34,6 +34,11 @@ describe "Package", ->
       expect(global.localStorage.getItem.callCount).toBe 2
       expect(global.localStorage.setItem.callCount).toBe 1
 
+    it "utilizes _atomModuleCache to get native modules and skips traversing through submodules", ->
+      packagePath = atom.project.getDirectories()[0]?.resolve('packages/package-with-both-incompatible-and-compatible-native-modules')
+      pack = new Package(packagePath)
+      expect(pack.isCompatible()).toBe true
+
   describe "theme", ->
     theme = null
 
