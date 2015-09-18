@@ -26,6 +26,7 @@ module.exports = (grunt) ->
         done(error)
         return
 
+      version = '1.0.1'
       appDir = grunt.config.get('atom.appDir')
 
       # Replace version field of package.json.

@@ -90,6 +90,8 @@ class AutoUpdateManager
       autoUpdater.once 'update-not-available', @onUpdateNotAvailable
       autoUpdater.once 'error', @onUpdateError
 
+    console.log('called')
+
     autoUpdater.checkForUpdates() unless @testMode
 
   install: ->
